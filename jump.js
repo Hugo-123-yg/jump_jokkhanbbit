@@ -6,10 +6,10 @@
     window.JumpGame.destroy();
     const R=window.JumpRules,app=root,shell=node('section','jg'),canvas=node('canvas','jg-canvas');
     app.classList.add('jump-mode');document.body.dataset.miniGame='jump';
-    shell.setAttribute('aria-label','跳一跳小游戏');canvas.tabIndex=0;canvas.setAttribute('role','button');canvas.setAttribute('aria-label','跳一跳游戏区域，按住蓄力，松手起跳');
+    shell.setAttribute('aria-label','跳一跳小游戏');canvas.tabIndex=0;canvas.setAttribute('role','button');canvas.setAttribute('aria-label','');
     const top=node('header','jg-top'),back=node('button','jg-back','‹'),best=node('span','jg-best');back.type='button';back.setAttribute('aria-label','选择角色');back.onclick=()=>showChooser();top.append(back,node('b','','跳一跳'),best);
     const scoreBoard=node('div','jg-score'),scoreText=node('strong','','0'),scoreLabel=node('span','','本次得分');scoreBoard.append(scoreText,scoreLabel);
-    const hint=node('p','jg-hint','按住任意空白处蓄力，松手起跳'),celebration=node('div','jg-celebration');celebration.hidden=true;celebration.setAttribute('aria-live','polite');
+    const hint=node('p','jg-hint',''),celebration=node('div','jg-celebration');celebration.hidden=true;celebration.setAttribute('aria-live','polite');
     const over=node('div','jg-over');over.hidden=true;const card=node('section','jg-over-card'),final=node('strong'),restart=node('button','','再跳一次');restart.type='button';card.append(node('span','','本次得分'),final,restart);over.append(card);
     const live=node('span','jg-live');live.setAttribute('role','status');live.setAttribute('aria-live','polite');shell.append(canvas,top,scoreBoard,hint,celebration,over,live);root.replaceChildren(shell);
     const ctx=canvas.getContext('2d');if(!ctx){app.classList.remove('jump-mode');delete document.body.dataset.miniGame;root.replaceChildren(node('p','','当前浏览器暂不支持游戏画面'));return}
@@ -25,11 +25,11 @@
     function resize(){const rect=shell.getBoundingClientRect();if(!rect.width||!rect.height)return;width=rect.width;height=rect.height;viewScale=width/390;worldHeight=height/viewScale;const dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr*viewScale,0,0,dpr*viewScale,0,0);}
     function reset(){score=0;scoreText.textContent='0';best.textContent='最佳 '+record;platforms=[{x:0,y:0,rx:64,ry:37,index:0,color:0}];current=platforms[0];target=R.next(current,1);platforms.push(target);player={x:current.x,y:current.y,air:0};camera={x:(current.x+target.x)*0.5,y:current.y};phase='ready';activePointer=null;keyHeld=false;pointers.clear();flight=null;chargeValue=0;pressure=0;particles=[];over.hidden=true;celebration.hidden=true;celebrationEnd=0;landingPulse=0;hint.textContent='按住任意空白处蓄力，松手起跳';live.textContent='游戏开始，按住蓄力，松手起跳';}
     function startHold(force){if(!chooser.hidden||phase!=='ready'||pausedAt!==null)return false;phase='charging';holdStart=performance.now();pressure=force;vibrationStep=0;hint.textContent='按得越久，跳得越远';return true}
-    function cancelHold(){if(phase==='charging'){phase='ready';chargeValue=0;hint.textContent='蓄力已取消，重新按住即可'}activePointer=null;keyHeld=false;pressure=0;}
+    function cancelHold(){if(phase==='charging'){phase='ready';chargeValue=0;hint.textContent=''}activePointer=null;keyHeld=false;pressure=0;}
     function release(){if(phase!=='charging')return;const power=R.charge(performance.now()-holdStart,pressure),distance=R.distance(power),gap=Math.hypot(target.x-player.x,target.y-player.y);flight={from:{x:player.x,y:player.y},to:{x:player.x+(target.x-player.x)/gap*distance,y:player.y+(target.y-player.y)/gap*distance},start:performance.now(),duration:480+power*180};phase='jumping';activePointer=null;keyHeld=false;chargeValue=0;vibrate(8);}
     function celebrate(now){celebration.replaceChildren(node('span','','✦'),node('strong','','锐因99'),node('small','',score+' 分 · 特别时刻'));celebration.hidden=false;celebrationEnd=now+3000;live.textContent=score+'分！锐因99';vibrate([20,55,20]);particles=[];for(let burst=0;burst<5;burst++){const x=40+Math.random()*310,y=170+Math.random()*140;for(let i=0;i<34;i++){const a=i/34*Math.PI*2,speed=35+Math.random()*140;particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,age:-burst*.15,life:1.8+Math.random()*.8,color:['#f5bd58','#ef7892','#84b5a2','#ffffff','#b7a1e3'][i%5]})}}}
     function finishJump(now){const result=R.result(score,flight.to,target);player={...flight.to,air:0};flight=null;
-      if(!result.landed){phase='falling';failStart=now;hint.textContent='再试一次，找到自己的节奏';vibrate(25);return}
+      if(!result.landed){phase='falling';failStart=now;hint.textContent='';vibrate(25);return}
       score=result.score;scoreText.textContent=String(score);if(score>record){record=score;best.textContent='最佳 '+record;try{localStorage.setItem('phone-jump-best',String(record))}catch{}}
       current=target;target=R.next(current,score+1);platforms.push(target);if(platforms.length>8)platforms.shift();phase='ready';landingPulse=1;hint.textContent='稳稳落下，再向前一步';if(result.celebrate)celebrate(now);else live.textContent=score+'分';
     }
@@ -82,7 +82,7 @@
     chooser.append(choices,play);shell.append(chooser);
     function loadSprites(){play.disabled=true;play.textContent='角色载入中…';window.JumpDolls.load().then(()=>{if(!alive)return;spritesReady=true;play.disabled=false;play.onclick=beginGame;updateChoice()}).catch(()=>{if(!alive)return;play.disabled=false;play.textContent='重新加载角色';play.onclick=()=>{loadSprites()}})}
     const beginGame=play.onclick;loadSprites();
-    const change=node('button','jg-change','换个小伙伴');change.type='button';change.onclick=showChooser;card.append(change);
+    const change=node('button','jg-change','换个TWIMI');change.type='button';change.onclick=showChooser;card.append(change);
     restart.onclick=reset;resize();reset();showChooser();raf=requestAnimationFrame(frame);
     dispose=()=>{alive=false;cancelAnimationFrame(raf);for(const off of listeners)off();if(observer)observer.disconnect();pointers.clear();app.classList.remove('jump-mode');delete document.body.dataset.miniGame;};
   }};
